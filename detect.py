@@ -1,6 +1,7 @@
 import argparse
 import time
 from pathlib import Path
+from hyperlpr import *
 
 import cv2
 import torch
@@ -14,6 +15,15 @@ from utils.general import check_img_size, non_max_suppression, apply_classifier,
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
+import numpy
+from PIL import Image, ImageDraw, ImageFont
+def cv2ImgAddText(img, text, left, top, textColor=(0, 255, 0), textSize=20):
+    if (isinstance(img, numpy.ndarray)):
+        img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(img)
+    fontStyle = ImageFont.truetype("./simsun.ttc", textSize, encoding="utf-8")
+    draw.text((left, top), text, textColor, font=fontStyle)
+    return cv2.cvtColor(numpy.asarray(img), cv2.COLOR_RGB2BGR)
 
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
@@ -98,6 +108,10 @@ def detect(save_img=False):
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += '%g %ss, ' % (n, names[int(c)])  # add to string
 
+                lprs = HyperLPR_plate_recognition(im0)
+                for e in lprs:
+                    im0 = cv2ImgAddText(im0,e[0],e[2][0],e[2][1],textSize=48)
+
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
@@ -115,6 +129,7 @@ def detect(save_img=False):
 
             # Stream results
             if view_img:
+
                 cv2.imshow(str(p), im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
                     raise StopIteration
